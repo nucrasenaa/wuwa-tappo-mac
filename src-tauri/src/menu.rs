@@ -33,19 +33,19 @@ struct Labels {
 impl Default for Labels {
     fn default() -> Self {
         Self {
-            open_bag: "背包".into(),
-            open_atlas: "图鉴".into(),
-            open_exchange: "合成".into(),
-            open_room: "联机".into(),
-            hide_pet: "隐藏桌宠".into(),
-            show_pet: "显示桌宠".into(),
-            tray_open_settings: "设置".into(),
-            dock_settings: "设置".into(),
-            window_size: "桌宠大小".into(),
-            window_passthrough: "鼠标穿透".into(),
-            window_opacity: "不透明度".into(),
-            restart: "重新启动".into(),
-            quit: "退出 Wuwa Tappo".into(),
+            open_bag: "Inventory".into(),
+            open_atlas: "Atlas".into(),
+            open_exchange: "Synthesis".into(),
+            open_room: "Multiplayer".into(),
+            hide_pet: "Hide Pet".into(),
+            show_pet: "Show Pet".into(),
+            tray_open_settings: "Settings".into(),
+            dock_settings: "Settings".into(),
+            window_size: "Pet Size".into(),
+            window_passthrough: "Mouse Passthrough".into(),
+            window_opacity: "Opacity".into(),
+            restart: "Restart".into(),
+            quit: "Quit Wuwa Tappo".into(),
             tray_tooltip: "Wuwa Tappo".into(),
         }
     }
@@ -193,8 +193,8 @@ fn context_items(
             options.window_passthrough,
         )?,
         MenuItemKind::Predefined(PredefinedMenuItem::separator(app)?),
-        normal(app, "input-access", "启用键鼠监听…")?,
-        normal(app, "open-logs", "查看日志")?,
+        normal(app, "input-access", "Enable Input Monitoring…")?,
+        normal(app, "open-logs", "View Logs")?,
         MenuItemKind::Predefined(PredefinedMenuItem::separator(app)?),
         normal(app, "restart", &labels.restart)?,
         normal(app, "quit", &labels.quit)?,
@@ -218,14 +218,14 @@ fn application_menu(app: &AppHandle, options: &MenuOptions) -> tauri::Result<Men
     application.append(&MenuItem::with_id(
         app,
         "open-about",
-        "关于 Wuwa Tappo",
+        "About Wuwa Tappo",
         true,
         None::<&str>,
     )?)?;
     let session_label = match app.try_state::<crate::session::SessionStore>() {
-        Some(session) if session.is_ephemeral() => "登录信息：仅本次会话",
-        Some(_) => "登录信息：钥匙串",
-        None => "登录信息：尚未选择",
+        Some(session) if session.is_ephemeral() => "Sign-in: Session Only",
+        Some(_) => "Sign-in: Keychain",
+        None => "Sign-in: Not Selected",
     };
     application.append(&MenuItem::with_id(
         app,
@@ -245,7 +245,7 @@ fn application_menu(app: &AppHandle, options: &MenuOptions) -> tauri::Result<Men
     application.append(&MenuItem::with_id(
         app,
         "input-access",
-        "启用键鼠监听…",
+        "Enable Input Monitoring…",
         true,
         None::<&str>,
     )?)?;
@@ -264,7 +264,7 @@ fn application_menu(app: &AppHandle, options: &MenuOptions) -> tauri::Result<Men
 
     let edit = Submenu::with_items(
         app,
-        "编辑",
+        "Edit",
         true,
         &[
             &PredefinedMenuItem::undo(app, None)?,
@@ -456,7 +456,7 @@ mod tests {
         }))
         .unwrap();
         assert_eq!(options.labels.open_bag, "Backpack");
-        assert_eq!(options.labels.open_atlas, "图鉴");
+        assert_eq!(options.labels.open_atlas, "Atlas");
         assert!(!options.pet_dock_visible);
         assert_eq!(options.pet_scale, 51);
         assert_eq!(options.window_opacity, 0);

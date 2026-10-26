@@ -54,7 +54,7 @@ test('Mac update feedback preserves the native platform explanation', () => {
 test('About separates the Mac build target from official Windows requirements', () => {
   const patched = patchMacAbout('t=b(()=>k("about_content")?String(v("about_content")).trim():"");<h2 data-v-439444c8>系统配置</h2>');
   assert.ok(patched.includes('Apple Silicon'));
-  assert.ok(patched.includes('Windows 原版系统配置'));
-  assert.ok(patched.includes('html.replace("系统配置","Windows 原版系统配置")'));
+  assert.ok(patched.includes('Official Windows requirements'));
+  assert.ok(patched.includes('html.replace("系统配置","Official Windows requirements")'));
   assert.throws(() => patchMacAbout(''), /About system section changed/);
 });

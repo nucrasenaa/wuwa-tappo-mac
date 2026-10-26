@@ -92,10 +92,10 @@
           (document.body || document.documentElement).append(warning);
         }
         warning.textContent = status?.error === 'input_status_unavailable'
-          ? '无法读取键鼠监听状态。请从菜单“启用键鼠监听”重试。'
+          ? 'Unable to read Input Monitoring status. Retry from the “Enable Input Monitoring” menu.'
           : !status?.granted
-            ? '键鼠计数已暂停：请在系统设置 → 输入监控中重新允许 Wuwa Tappo Global Mac。'
-            : '已获得输入监控权限，但监听尚未启动。请从菜单“启用键鼠监听”重试，必要时重启应用。';
+            ? 'Keyboard and mouse counting is paused. Re-enable Wuwa Tappo Global Mac in System Settings → Privacy & Security → Input Monitoring.'
+            : 'Input Monitoring permission is granted, but the monitor has not started. Retry from the “Enable Input Monitoring” menu; restart the app if needed.';
       }
       const signature = JSON.stringify([status?.granted ?? null, status?.running ?? null, status?.error ?? null]);
       if (signature !== previousStatus) {

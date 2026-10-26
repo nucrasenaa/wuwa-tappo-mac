@@ -75,16 +75,16 @@ export function patchMacUpdater(source) {
 
 export function patchMacAbout(source) {
   const remote = 't=b(()=>k("about_content")?String(v("about_content")).trim():"")';
-  const info = '<h2 data-v-439444c8>macOS 重建版</h2><p data-v-439444c8>本地非官方重建 · Apple Silicon · 构建目标 macOS 13 及以上</p>';
+  const info = '<h2 data-v-439444c8>macOS Rebuild</h2><p data-v-439444c8>Unofficial community rebuild · Apple Silicon · macOS 13 or later</p>';
   const banner = `<section class="about-section" data-v-439444c8>${info}</section>`;
   if (source.split(remote).length === 2) {
     const original = '<h2 data-v-439444c8>系统配置</h2>';
     if (source.split(original).length !== 2) throw new Error('Original About system section changed; reconcile the Mac build information before building.');
     return source
-      .replace(original, `${info}<h3 data-v-439444c8>Windows 原版系统配置</h3>`)
-      .replace(remote, `t=b(()=>{const html=k("about_content")?String(v("about_content")).trim():"";return html?${JSON.stringify(banner)}+html.replace("系统配置","Windows 原版系统配置"):""})`);
+      .replace(original, `${info}<h3 data-v-439444c8>Official Windows requirements</h3>`)
+      .replace(remote, `t=b(()=>{const html=k("about_content")?String(v("about_content")).trim():"";return html?${JSON.stringify(banner)}+html.replace("系统配置","Official Windows requirements"):""})`);
   }
   const matches = [...source.matchAll(/<h2 (data-v-[^>]+)>系统配置<\/h2>/g)];
   if (matches.length !== 1) throw new Error('Original About system section changed; reconcile the Mac build information before building.');
-  return source.replace(matches[0][0], `<h2 ${matches[0][1]}>macOS 重建版</h2><p ${matches[0][1]}>本地非官方重建 · Apple Silicon · 构建目标 macOS 13 及以上</p>`);
+  return source.replace(matches[0][0], `<h2 ${matches[0][1]}>macOS Rebuild</h2><p ${matches[0][1]}>Unofficial community rebuild · Apple Silicon · macOS 13 or later</p>`);
 }

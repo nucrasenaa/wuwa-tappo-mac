@@ -38,9 +38,9 @@ fn startup_status(app: &tauri::AppHandle) -> Value {
         .lock()
         .unwrap_or_else(|poisoned| poisoned.into_inner());
     let message=error.unwrap_or_else(||match (loading,mode) {
-        (true,Some(startup::SessionMode::Keychain))=>"正在读取登录信息…\n请在 macOS 的钥匙串提示中自行处理授权。".into(),
-        (true,_)=>"正在启动，仅本次会话保存登录信息…".into(),
-        _=>"仅本次会话：登录信息只保存在内存，退出后清除。\n记住登录：使用 macOS 钥匙串，需要系统授权。".into(),
+        (true,Some(startup::SessionMode::Keychain))=>"Loading sign-in information…\nPlease handle the authorization prompt in the macOS Keychain.".into(),
+        (true,_)=>"Starting with session-only sign-in information…".into(),
+        _=>"Session only: sign-in information is kept in memory and cleared when you quit.\nRemember sign-in: uses the macOS Keychain and requires system authorization.".into(),
     });
     serde_json::json!({"loading":loading,"message":message,"mode":mode})
 }
@@ -51,7 +51,7 @@ fn begin_session(
     remember_choice: bool,
 ) -> Result<(), String> {
     if app.try_state::<session::SessionStore>().is_some() {
-        return Err("已有登录会话。请先退出应用，再重新启动并选择登录信息保存方式。".into());
+        return Err("A sign-in session already exists. Quit the app, restart it, and choose a sign-in storage mode.".into());
     }
     if app
         .state::<StartupState>()
@@ -100,7 +100,7 @@ fn begin_session(
         let scheduling = app.run_on_main_thread(move || {
             let result = (|| -> Result<(), String> {
                 if !handle.manage(session?) {
-                    return Err("已有登录会话，无法更换保存方式。请退出应用后重试。".into());
+                    return Err("A sign-in session already exists; cannot change storage mode. Quit and retry.".into());
                 }
                 windows::setup(&handle)?;
                 if let Err(error) = input::start(handle.clone()) {
@@ -115,7 +115,7 @@ fn begin_session(
             state.loading.store(false, Ordering::Release);
             if let Err(error) = result {
                 eprintln!("App startup failed: {error}");
-                let message = format!("无法读取登录信息或启动应用。\n{error}");
+                let message = format!("Could not read sign-in information or start the app.\n{error}");
                 if let Ok(mut failure) = state.error.lock() {
                     *failure = Some(message.clone());
                 }
@@ -310,7 +310,7 @@ pub fn run() {
             if let Some(mtm) = objc2::MainThreadMarker::new() {
                 let alert = objc2_app_kit::NSAlert::new(mtm);
                 alert.setMessageText(&objc2_foundation::NSString::from_str(
-                    "Wuwa Tappo Mac 无法启动",
+                    "Wuwa Tappo Global Mac failed to start",
                 ));
                 alert.setInformativeText(&objc2_foundation::NSString::from_str(&error.to_string()));
                 alert.runModal();

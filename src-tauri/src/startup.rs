@@ -12,9 +12,9 @@ pub fn load_mode(path: &Path) -> Result<Option<SessionMode>, String> {
     match fs::read(path) {
         Ok(bytes) => serde_json::from_slice(&bytes)
             .map(Some)
-            .map_err(|error| format!("登录信息保存方式配置无效：{error}")),
+            .map_err(|error| format!("Invalid sign-in storage mode configuration: {error}")),
         Err(error) if error.kind() == ErrorKind::NotFound => Ok(None),
-        Err(error) => Err(format!("无法读取登录信息保存方式：{error}")),
+        Err(error) => Err(format!("Could not read sign-in storage mode: {error}")),
     }
 }
 

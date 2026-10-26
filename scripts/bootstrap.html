@@ -14,9 +14,9 @@
   #memory{background:AccentColor;color:AccentColorText;border-color:AccentColor}
 </style>
 <h1>Wuwa Tappo · Global</h1>
-<p id="status">仅本次会话：登录信息只保存在内存，退出后清除。
-记住登录：使用 macOS 钥匙串，需要系统授权。</p>
-<footer><button id="quit">退出</button><button id="keychain">记住登录</button><button id="memory">仅本次会话</button></footer>
+<p id="status">Session only: sign-in information is kept in memory and cleared when you quit.
+Remember sign-in: uses the macOS Keychain and requires system authorization.</p>
+<footer><button id="quit">Quit</button><button id="keychain">Remember Sign-in</button><button id="memory">Session Only</button></footer>
 <script>
   const api=window.__TAURI__;
   const status=document.getElementById('status'),memory=document.getElementById('memory'),keychain=document.getElementById('keychain');
