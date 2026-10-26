@@ -14,7 +14,7 @@ phase() {
 }
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-APP="$ROOT/src-tauri/target/release/bundle/macos/Wuwa Tappo CN Mac.app"
+APP="$ROOT/src-tauri/target/release/bundle/macos/Wuwa Tappo Global Mac.app"
 OUTPUT="$ROOT/dist"
 
 usage() {
@@ -49,8 +49,8 @@ EXECUTABLE=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleExecutable' "$PLIST")
 VERSION=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$PLIST")
 MINIMUM=$(/usr/libexec/PlistBuddy -c 'Print :LSMinimumSystemVersion' "$PLIST")
 EXPECTED_VERSION=$(node -p "JSON.parse(require('fs').readFileSync(process.argv[1], 'utf8')).version" "$ROOT/src-tauri/tauri.conf.json")
-if [ "$IDENTIFIER" != dev.w33d.wuwatappo.cn.mac ] || [ "$VERSION" != "$EXPECTED_VERSION" ] || [ "$MINIMUM" != 13.0 ]; then
-  printf '%s\n' '应用标识、版本或最低系统要求与国服构建配置不一致。' >&2
+if [ "$IDENTIFIER" != dev.w33d.wuwatappo.global.mac ] || [ "$VERSION" != "$EXPECTED_VERSION" ] || [ "$MINIMUM" != 13.0 ]; then
+  printf '%s\n' '应用标识、版本或最低系统要求与 Global 构建配置不一致。' >&2
   exit 1
 fi
 case "$EXECUTABLE" in
@@ -65,7 +65,7 @@ fi
 /usr/bin/codesign --verify --deep --strict "$APP"
 
 # Tauri 将前端编译进主程序；检查打包输入及嵌入路径，而不是复制用户数据。
-phase '检查国服内置资源'
+phase '检查 Global 内置资源'
 node --input-type=module -e '
 import { readFile, readdir } from "node:fs/promises";
 import path from "node:path";
@@ -73,9 +73,9 @@ const [root, binary] = process.argv.slice(1);
 const source = path.join(root, "build/frontend");
 const index = await readFile(path.join(source, "index.html"), "utf8");
 const entry = index.match(/src="\.\/([^\"]+\.js)"/)?.[1];
-if (!entry) throw new Error("缺少已准备的国服前端入口。");
+if (!entry) throw new Error("缺少已准备的 Global 前端入口。");
 const main = await readFile(path.join(source, entry), "utf8");
-if (!main.includes("const APP_REGION=\"CN\"")) throw new Error("安装包必须使用国服前端。");
+if (!main.includes("const APP_REGION=\"GLOBAL\"")) throw new Error("安装包必须使用 Global 前端。");
 const bytes = await readFile(binary);
 for (const asset of ["/index.html", `/${entry}`, "/app-icon.png"]) {
   if (!bytes.includes(Buffer.from(asset))) throw new Error(`应用未嵌入必要资源：${asset}`);
@@ -91,22 +91,22 @@ mkdir -p "$OUTPUT"
 OUTPUT="$(cd "$OUTPUT" && pwd)"
 STAGE=$(mktemp -d "${TMPDIR:-/tmp}/wuwatappo-package.XXXXXX")
 trap 'rm -rf "$STAGE"' EXIT
-NAME="WuwaTappo-CN-Mac-$VERSION-arm64"
+NAME="WuwaTappo-Global-Mac-$VERSION-arm64"
 phase '复制应用并复查签名'
-ditto --norsrc --noextattr --noqtn --noacl "$APP" "$STAGE/Wuwa Tappo CN Mac.app"
-/usr/bin/codesign --verify --deep --strict "$STAGE/Wuwa Tappo CN Mac.app"
+ditto --norsrc --noextattr --noqtn --noacl "$APP" "$STAGE/Wuwa Tappo Global Mac.app"
+/usr/bin/codesign --verify --deep --strict "$STAGE/Wuwa Tappo Global Mac.app"
 phase '生成 ZIP'
-ditto -c -k --norsrc --noextattr --noqtn --noacl --keepParent "$STAGE/Wuwa Tappo CN Mac.app" "$STAGE/$NAME.zip"
+ditto -c -k --norsrc --noextattr --noqtn --noacl --keepParent "$STAGE/Wuwa Tappo Global Mac.app" "$STAGE/$NAME.zip"
 phase '生成 DMG'
 mkdir "$STAGE/dmg"
-mv "$STAGE/Wuwa Tappo CN Mac.app" "$STAGE/dmg/"
+mv "$STAGE/Wuwa Tappo Global Mac.app" "$STAGE/dmg/"
 ln -s /Applications "$STAGE/dmg/Applications"
 IMAGE_SIZE_MIB=$(node "$ROOT/scripts/dmg-size.mjs" "$STAGE/dmg")
 printf 'DMG 文件系统：HFS+；容量：%s MiB；主机可用空间：\n' "$IMAGE_SIZE_MIB"
 df -h "$STAGE" "$OUTPUT"
-hdiutil create -fs HFS+ -size "${IMAGE_SIZE_MIB}m" -volname 'Wuwa Tappo CN Mac' -srcfolder "$STAGE/dmg" -format UDZO "$STAGE/$NAME.dmg"
+hdiutil create -fs HFS+ -size "${IMAGE_SIZE_MIB}m" -volname 'Wuwa Tappo Global Mac' -srcfolder "$STAGE/dmg" -format UDZO "$STAGE/$NAME.dmg"
 phase '校验 DMG'
 hdiutil verify "$STAGE/$NAME.dmg"
 phase '交付安装包'
 mv "$STAGE/$NAME.zip" "$STAGE/$NAME.dmg" "$OUTPUT/"
-printf '完整国服安装包：\n%s\n%s\n' "$OUTPUT/$NAME.zip" "$OUTPUT/$NAME.dmg"
+printf '完整 Global 安装包：\n%s\n%s\n' "$OUTPUT/$NAME.zip" "$OUTPUT/$NAME.dmg"

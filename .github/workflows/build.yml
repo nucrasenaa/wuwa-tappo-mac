@@ -43,7 +43,7 @@ jobs:
             src-tauri/target
           key: macos-arm64-rust-1.97.1-${{ hashFiles('src-tauri/Cargo.lock') }}
       - run: npm ci
-      - name: Restore verified official CN resources
+      - name: Restore verified official Global resources
         run: node scripts/sync-upstream.mjs
       - name: Prepare native build inputs
         run: npm run icons && npm run prepare:frontend
@@ -68,7 +68,7 @@ jobs:
           retention-days: 14
       - uses: actions/upload-artifact@v4
         with:
-          name: WuwaTappo-CN-Mac-arm64
+          name: WuwaTappo-Global-Mac-arm64
           path: |
             dist/*.zip
             dist/*.dmg

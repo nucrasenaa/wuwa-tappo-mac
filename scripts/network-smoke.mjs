@@ -17,7 +17,7 @@ export async function verifySourceContract(assetDirectory = path.join(root, 'fro
   const expected = contract.http.endpoints.map(({ method, path }) => `${method} ${path}`).sort();
   assert.deepEqual(observed, expected, 'Business endpoint inventory differs from the supplied frontend');
   assert.ok(![main, room, login, loginView].some((source) => source.includes('plugin:http|')), 'Frontend now uses a native HTTP plugin');
-  assert.ok(main.includes(`APP_REGION="${contract.region}"`), 'Expected the domestic frontend build');
+  assert.ok(main.includes(`APP_REGION="${contract.region}"`), 'Expected the official Global frontend build');
   for (const value of [
     contract.http.baseUrl,
     contract.auth.businessTokenCookie.replace(/^kuro_/, ''),
@@ -32,17 +32,20 @@ export async function verifySourceContract(assetDirectory = path.join(root, 'fro
     contract.auth.sdk.successEvent,
     contract.auth.viewOpenedEvent,
     ...contract.auth.secureLocalStorageKeys,
-  ]) assert.ok(login.includes(value), `Missing domestic login marker: ${value}`);
-  assert.ok(!login.includes('plugin:deep-link|'), 'Domestic login unexpectedly requires a native OAuth callback');
-  assert.ok(/\b_e\(e,1\)/.test(login), 'Domestic player query must pass is_domestic=1');
-  assert.ok(/\bse\([^;]+,"sdk",i,a,1\)/.test(login), 'Domestic SDK login must pass source=sdk and is_domestic=1');
-  assert.ok(loginView.includes('handleInlandSDKLogin'), 'Login view must bind the domestic SDK callback');
+  ]) assert.ok(login.includes(value), `Missing Global login marker: ${value}`);
+  for (const value of [
+    contract.auth.deepLink.pluginCommand,
+    contract.auth.deepLink.event,
+    contract.auth.deepLink.scheme,
+    contract.auth.browserAuthPageHost,
+  ]) assert.ok(main.includes(value), `Missing Global browser OAuth marker: ${value}`);
+  assert.ok(loginView.includes('handleInlandSDKLogin'), 'Login view must retain the embedded SDK fallback');
   assert.ok(loginView.includes('Re({link:'), 'Login view must load the embedded SDK assets');
   const scriptIsHttps = main.includes(`isdkSrc="${contract.auth.sdk.scriptUrl}"`);
   const stylesheetIsHttps = main.includes(`isdkCss="${contract.auth.sdk.stylesheetUrl}"`);
-  assert.ok(scriptIsHttps || main.includes(`isdkSrc="${contract.auth.sdk.sourceScriptUrl}"`), 'Unexpected domestic SDK script URL');
-  assert.ok(stylesheetIsHttps || main.includes(`isdkCss="${contract.auth.sdk.sourceStylesheetUrl}"`), 'Unexpected domestic SDK stylesheet URL');
-  assert.ok(room.includes(contract.socket.baseUrl), 'Socket host must use the domestic backend');
+  assert.ok(scriptIsHttps || main.includes(`isdkSrc="${contract.auth.sdk.sourceScriptUrl}"`), 'Unexpected SDK script URL');
+  assert.ok(stylesheetIsHttps || main.includes(`isdkCss="${contract.auth.sdk.sourceStylesheetUrl}"`), 'Unexpected SDK stylesheet URL');
+  assert.ok(room.includes(contract.socket.baseUrl), 'Socket host must use the Global backend');
   assert.ok(room.includes('transports:["websocket"]'), 'Expected browser WebSocket transport');
   assert.ok(room.includes('reconnection:!1'), 'Expected frontend-owned reconnection');
   return {
@@ -50,7 +53,7 @@ export async function verifySourceContract(assetDirectory = path.join(root, 'fro
     businessEndpoints: observed.length,
     tauriHttpPluginUsed: false,
     loginMode: contract.auth.mode,
-    browserOAuthRequired: false,
+    browserOAuthRequired: contract.auth.browserOAuthRequired,
     sdkUrlsAreExplicitHttps: scriptIsHttps && stylesheetIsHttps,
     sessionSelection: contract.session.selection,
     requestedSessionPersistence: contract.session.requestedPersistence,
@@ -131,7 +134,7 @@ export async function probePublicNetwork() {
   const sdkSource = await sdk.text();
   assert.ok(sdkSource.includes('openLoginView'));
   assert.ok(sdkSource.includes(contract.auth.sdk.environment));
-  checks.push({ path: new URL(contract.auth.sdk.scriptUrl).pathname, service: 'domestic-login-sdk-static-source', status: sdk.status });
+  checks.push({ path: new URL(contract.auth.sdk.scriptUrl).pathname, service: 'global-login-sdk-static-source', status: sdk.status });
 
   return {
     checkedAt: new Date().toISOString(),

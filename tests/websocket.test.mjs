@@ -4,7 +4,7 @@ import { readFile } from 'node:fs/promises';
 import vm from 'node:vm';
 
 const script = await readFile(new URL('../scripts/mac-websocket.js', import.meta.url), 'utf8');
-const url = 'wss://api-mc-wuwatappo.kurogames-global.com/socket.io/?EIO=3&transport=websocket&token=synthetic';
+const url = 'wss://api-wutheringwaves-wuwatappo.kurogames-global.com/socket.io/?EIO=3&transport=websocket&token=synthetic';
 const tick = () => new Promise(resolve => setImmediate(resolve));
 
 function environment({ early = false, failConnect = false, failSend = false } = {}) {

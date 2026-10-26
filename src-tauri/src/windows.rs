@@ -24,7 +24,6 @@ pub const COMMANDS: &[&str] = &[
     "close_oss_notice_window",
     "close_panel_window",
     "close_update_window",
-    "ensure_main_taskbar_icon",
     "exit_app",
     "finish_main_window_monitor_switch",
     "get_app_update_detail",
@@ -45,6 +44,7 @@ pub const COMMANDS: &[&str] = &[
     "resize_login_window_to_content",
     "set_main_force_cursor_ignore",
     "set_main_hit_region",
+        "set_main_skip_taskbar",
     "set_main_swallow_mouse",
     "set_main_window_content_bounds",
     "set_main_window_fullscreen_shell",
@@ -166,7 +166,7 @@ fn build_window(
         WebviewUrl::App(format!("index.html#{route}").into()),
     )
     .title(if label == "main" {
-        "Wuwa Tappo CN Mac"
+        "Wuwa Tappo Global Mac"
     } else {
         "Wuwa Tappo"
     })
@@ -634,9 +634,13 @@ pub fn dispatch(
             };
             main_window(app)?.set_cursor_icon(cursor).map_err(err)?;
         }
-        "ensure_main_taskbar_icon" => {
-            app.set_dock_visibility(true).map_err(err)?;
-            main_window(app)?.set_skip_taskbar(false).map_err(err)?;
+        "set_main_skip_taskbar" => {
+            let skip = args
+                .get("skip")
+                .and_then(Value::as_bool)
+                .ok_or("Missing skip state")?;
+            app.set_dock_visibility(!skip).map_err(err)?;
+            main_window(app)?.set_skip_taskbar(skip).map_err(err)?;
         }
         "show_toast_overlay" => {
             let w = if let Some(w) = app.get_webview_window("toast") {

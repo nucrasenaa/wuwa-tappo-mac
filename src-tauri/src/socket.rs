@@ -19,7 +19,7 @@ use tokio_tungstenite::{
     },
 };
 
-const HOST: &str = "api-mc-wuwatappo.kurogames-global.com";
+const HOST: &str = "api-wutheringwaves-wuwatappo.kurogames-global.com";
 const MAX_MESSAGE_BYTES: usize = 8 * 1024 * 1024;
 const CONNECT_TIMEOUT: Duration = Duration::from_secs(10);
 const CLOSE_TIMEOUT: Duration = Duration::from_secs(5);
@@ -82,7 +82,7 @@ fn validate_destination(value: &str) -> Result<Url, String> {
         || url.password().is_some()
         || url.fragment().is_some()
     {
-        return Err("Only the official CN WebSocket endpoint is allowed".into());
+        return Err("Only the official Global WebSocket endpoint is allowed".into());
     }
     Ok(url)
 }

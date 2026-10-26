@@ -5,35 +5,66 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
-export const configUrl = 'https://api-mc-wuwatappo.kurogames-global.com/api/common/activity-config';
-export const assetsOrigin = 'https://mc-wuwatappo.kurogames-global.com';
 
-export function officialAssetUrl(value) {
+export const REGION_CONFIGS = Object.freeze({
+  CN: Object.freeze({
+    region: 'CN',
+    label: '国服',
+    configUrl: 'https://api-mc-wuwatappo.kurogames-global.com/api/common/activity-config',
+    assetsOrigin: 'https://mc-wuwatappo.kurogames-global.com',
+    pointerPath: '/app/json-host/latest_host.json',
+    installerPrefix: 'WuwaTappo-cn',
+  }),
+  GLOBAL: Object.freeze({
+    region: 'GLOBAL',
+    label: 'Global',
+    configUrl: 'https://api-wutheringwaves-wuwatappo.kurogames-global.com/api/common/activity-config',
+    assetsOrigin: 'https://wutheringwaves-wuwatappo.kurogames-global.com',
+    pointerPath: '/app/json-host/latest-global_host.json',
+    installerPrefix: 'WuwaTappo-global',
+  }),
+});
+
+export const DEFAULT_REGION = 'GLOBAL';
+export const configUrl = REGION_CONFIGS[DEFAULT_REGION].configUrl;
+export const assetsOrigin = REGION_CONFIGS[DEFAULT_REGION].assetsOrigin;
+
+function regionConfig(region = DEFAULT_REGION) {
+  const normalized = String(region).toUpperCase();
+  const config = REGION_CONFIGS[normalized];
+  if (!config) throw new Error(`不支持的资源区域：${region}。可选区域：${Object.keys(REGION_CONFIGS).join('、')}`);
+  return config;
+}
+
+export function officialAssetUrl(value, region = DEFAULT_REGION) {
+  const config = regionConfig(region);
   const url = new URL(value);
-  if (url.origin !== assetsOrigin || url.username || url.password || url.hash) {
-    throw new Error('资源地址必须来自国服官方 HTTPS 域名。');
+  if (url.origin !== config.assetsOrigin || url.protocol !== 'https:' || url.username || url.password || url.hash) {
+    throw new Error(`${config.label}资源地址必须来自官方 HTTPS 域名。`);
   }
   return url.href;
 }
 
-export function parseManifest(manifest, manifestUrl) {
-  officialAssetUrl(manifestUrl);
+export function parseManifest(manifest, manifestUrl, region = DEFAULT_REGION) {
+  const config = regionConfig(region);
+  officialAssetUrl(manifestUrl, config.region);
   const version = manifest?.version;
   if (typeof version !== 'string' || !/^\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?$/.test(version)) {
     throw new Error('官方版本号无效。');
   }
-  const url = officialAssetUrl(manifest?.platforms?.['windows-x86_64']?.url);
-  if (new URL(url).pathname.split('/').at(-1) !== `WuwaTappo-cn_${version}_x64-setup.exe`) {
-    throw new Error('官方清单必须提供与版本一致的国服安装包。');
+  const url = officialAssetUrl(manifest?.platforms?.['windows-x86_64']?.url, config.region);
+  if (new URL(url).pathname.split('/').at(-1) !== `${config.installerPrefix}_${version}_x64-setup.exe`) {
+    throw new Error(`官方清单必须提供与版本一致的${config.label}安装包。`);
   }
   const signature = manifest.platforms['windows-x86_64'].signature;
   if (typeof signature !== 'string' || !signature.trim()) throw new Error('官方清单缺少安装包签名。');
-  return { schemaVersion: 1, region: 'CN', version, manifestUrl, installer: { url, signature } };
+  return { schemaVersion: 1, region: config.region, version, manifestUrl, installer: { url, signature } };
 }
 
 export function validateLock(lock) {
-  if (lock?.schemaVersion !== 1 || lock.region !== 'CN') throw new Error('资源锁必须是 schemaVersion 1 的国服配置。');
-  parseManifest({ version: lock.version, platforms: { 'windows-x86_64': lock.installer } }, lock.manifestUrl);
+  const config = regionConfig(lock?.region);
+  if (lock?.schemaVersion !== 1 || lock.region !== config.region) throw new Error(`资源锁必须是 schemaVersion 1 的${config.label}配置。`);
+  parseManifest({ version: lock.version, platforms: { 'windows-x86_64': lock.installer } }, lock.manifestUrl, config.region);
   if (!/^[a-f0-9]{64}$/.test(lock.installer.sha256) || !Number.isSafeInteger(lock.installer.size) || lock.installer.size <= 0) {
     throw new Error('资源锁缺少有效的 SHA-256 或文件大小。');
   }
@@ -42,9 +73,9 @@ export function validateLock(lock) {
 
 export function verifyInstaller(bytes, lock) {
   validateLock(lock);
-  if (bytes.length !== lock.installer.size) throw new Error('国服安装包大小不匹配，请重新下载锁定版本。');
+  if (bytes.length !== lock.installer.size) throw new Error(`${lock.region} 安装包大小不匹配，请重新下载锁定版本。`);
   const sha256 = createHash('sha256').update(bytes).digest('hex');
-  if (sha256 !== lock.installer.sha256) throw new Error('国服安装包 SHA-256 不匹配，已停止构建。');
+  if (sha256 !== lock.installer.sha256) throw new Error(`${lock.region} 安装包 SHA-256 不匹配，已停止构建。`);
   return { sha256, size: bytes.length };
 }
 
@@ -63,14 +94,15 @@ async function fetchJson(url, fetcher) {
   return response.json();
 }
 
-export async function discoverUpstream(fetcher = fetch) {
-  const config = await fetchJson(configUrl, fetcher);
-  if (config.code !== 0 || typeof config.data?.assets_host !== 'string') throw new Error('国服活动配置无效。');
-  const host = officialAssetUrl(config.data.assets_host);
-  if (new URL(host).pathname !== '/') throw new Error('国服资源根地址无效。');
-  const pointer = await fetchJson(new URL('/app/json-host/latest_host.json', host).href, fetcher);
-  const manifestUrl = officialAssetUrl(pointer.url);
-  return parseManifest(await fetchJson(manifestUrl, fetcher), manifestUrl);
+export async function discoverUpstream(fetcher = fetch, region = DEFAULT_REGION) {
+  const settings = regionConfig(region);
+  const config = await fetchJson(settings.configUrl, fetcher);
+  if (config.code !== 0 || typeof config.data?.assets_host !== 'string') throw new Error(`${settings.label}活动配置无效。`);
+  const host = officialAssetUrl(config.data.assets_host, settings.region);
+  if (new URL(host).pathname !== '/') throw new Error(`${settings.label}资源根地址无效。`);
+  const pointer = await fetchJson(new URL(settings.pointerPath, host).href, fetcher);
+  const manifestUrl = officialAssetUrl(pointer.url, settings.region);
+  return parseManifest(await fetchJson(manifestUrl, fetcher), manifestUrl, settings.region);
 }
 
 async function exists(filename) {
@@ -93,7 +125,7 @@ async function installerBytes(lock, options, work) {
   const filename = path.join(work, 'installers', ...parts);
   if (!options.updateLock && await exists(filename)) return { filename, bytes: await readFile(filename) };
   const response = await fetch(lock.installer.url, { redirect: 'error', signal: AbortSignal.timeout(300_000) });
-  if (!response.ok) throw new Error(`下载国服安装包失败：HTTP ${response.status}`);
+  if (!response.ok) throw new Error(`下载${regionConfig(lock.region).label}安装包失败：HTTP ${response.status}`);
   const bytes = Buffer.from(await response.arrayBuffer());
   if (lock.installer.sha256) verifyInstaller(bytes, lock);
   await mkdir(path.dirname(filename), { recursive: true });
@@ -103,9 +135,10 @@ async function installerBytes(lock, options, work) {
 }
 
 export async function syncUpstream(options = {}, projectRoot = root) {
-  const lockPath = path.join(projectRoot, 'upstream-cn.json');
+  const region = regionConfig(options.region).region;
+  const lockPath = path.join(projectRoot, `upstream-${region.toLowerCase()}.json`);
   const current = validateLock(JSON.parse(await readFile(lockPath, 'utf8')));
-  const latest = options.check || options.updateLock ? await discoverUpstream() : current;
+  const latest = options.check || options.updateLock ? await discoverUpstream(fetch, region) : current;
   const comparison = compareUpstream(current, latest);
   if (options.check) return comparison;
   const target = options.updateLock ? latest : current;
@@ -127,7 +160,7 @@ export async function syncUpstream(options = {}, projectRoot = root) {
     const result = spawnSync(process.execPath, [path.join(projectRoot, 'scripts/extract-assets.mjs'),
       '--installer', filename, '--sevenzip', sevenzip, '--output', output], { encoding: 'utf8', maxBuffer: 8 * 1024 * 1024 });
     if (result.error) throw result.error;
-    if (result.status !== 0) throw new Error(`国服资源提取失败：${result.stderr.trim() || result.stdout.trim()}`);
+    if (result.status !== 0) throw new Error(`${regionConfig(target.region).label}资源提取失败：${result.stderr.trim() || result.stdout.trim()}`);
     const extracted = JSON.parse(result.stdout);
     const hadFrontend = await exists(frontend);
     if (hadFrontend) await rename(frontend, backup);
@@ -145,6 +178,11 @@ export function parseOptions(args) {
     const arg = args[index];
     if (arg === '--check') options.check = true;
     else if (arg === '--update-lock') options.updateLock = true;
+    else if (arg === '--region') {
+      const value = args[++index];
+      if (!value || value.startsWith('--')) throw new Error('--region 需要 CN 或 GLOBAL。');
+      options.region = regionConfig(value).region;
+    }
     else if (arg === '--installer' || arg === '--sevenzip') {
       const value = args[++index];
       if (!value || value.startsWith('--')) throw new Error(`${arg} 需要路径。`);

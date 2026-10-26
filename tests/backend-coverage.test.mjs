@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
-import { patchSessionBarriers, patchLoginReady, patchDomesticSdkUrls, patchMacUpdateFeedback, patchMacAbout } from '../scripts/patch-frontend.mjs';
+import { patchSessionBarriers, patchLoginReady, patchGlobalSdkUrls, patchMacUpdateFeedback, patchMacAbout } from '../scripts/patch-frontend.mjs';
 
 const root = new URL('../', import.meta.url);
 
@@ -37,17 +37,17 @@ test('first login waits for the Vue modal listener rather than a page-load timer
   assert.throws(()=>patchLoginReady(''),/listener bridge changed/);
 });
 
-test('CN SDK script and stylesheet use HTTPS from the local Tauri origin', () => {
-  const source = 'const APP_REGION="CN";const isdkSrc="//pro-cdn-sdk.kurogame.com/pro/web-sdk/1.x/kr-sdk.js",isdkCss="//pro-cdn-sdk.kurogame.com/pro/web-sdk/1.x/style.css";';
-  const result = patchDomesticSdkUrls(source);
+test('Global SDK script and stylesheet use HTTPS from the local Tauri origin', () => {
+  const source = 'const APP_REGION="GLOBAL";const isdkSrc="//pro-cdn-sdk.kurogame.com/pro/web-sdk/1.x/kr-sdk.js",isdkCss="//pro-cdn-sdk.kurogame.com/pro/web-sdk/1.x/style.css";';
+  const result = patchGlobalSdkUrls(source);
   assert.ok(result.includes('isdkSrc="https://pro-cdn-sdk.kurogame.com/pro/web-sdk/1.x/kr-sdk.js"'));
   assert.ok(result.includes('isdkCss="https://pro-cdn-sdk.kurogame.com/pro/web-sdk/1.x/style.css"'));
-  assert.throws(() => patchDomesticSdkUrls(source.replace('"CN"', '"GLOBAL"')), /official CN frontend/);
-  assert.throws(() => patchDomesticSdkUrls('const APP_REGION="CN";'), /Expected 2 CN SDK URLs/);
+  assert.throws(() => patchGlobalSdkUrls(source.replace('"GLOBAL"', '"CN"')), /official GLOBAL frontend/);
+  assert.throws(() => patchGlobalSdkUrls('const APP_REGION="GLOBAL";'), /Expected 2 GLOBAL SDK URLs/);
 });
 
 test('Mac update feedback preserves the native platform explanation', () => {
-  assert.equal(patchMacUpdateFeedback('re.value=n("setting_version_check_failed")'), 're.value=b.message||n("setting_version_check_failed")');
+  assert.equal(patchMacUpdateFeedback('re.value=n("setting_version_check_failed")'), 're.value=h.message||n("setting_version_check_failed")');
   assert.throws(() => patchMacUpdateFeedback(''), /update feedback changed/);
 });
 

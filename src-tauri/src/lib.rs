@@ -239,6 +239,7 @@ fn handle(invoke: Invoke) -> bool {
 
 pub fn run() {
     let app = tauri::Builder::default()
+        .plugin(tauri_plugin_deep_link::init())
         .plugin(
             tauri_plugin_autostart::Builder::new()
                 .macos_launcher(tauri_plugin_autostart::MacosLauncher::LaunchAgent)
@@ -264,7 +265,7 @@ pub fn run() {
                 "bootstrap",
                 tauri::WebviewUrl::App("bootstrap.html".into()),
             )
-            .title("Wuwa Tappo CN Mac")
+            .title("Wuwa Tappo Global Mac")
             .inner_size(520., 260.)
             .resizable(false)
             .center()

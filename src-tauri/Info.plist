@@ -6,5 +6,16 @@
   <string>Wuwa Tappo animates your desktop companion when you type or click. Typed text is not recorded.</string>
   <key>LSMinimumSystemVersion</key>
   <string>13.0</string>
+  <key>CFBundleURLTypes</key>
+  <array>
+    <dict>
+      <key>CFBundleURLName</key>
+      <string>Wuwa Tappo Global OAuth</string>
+      <key>CFBundleURLSchemes</key>
+      <array>
+        <string>wuwa-buddy</string>
+      </array>
+    </dict>
+  </array>
 </dict>
 </plist>
