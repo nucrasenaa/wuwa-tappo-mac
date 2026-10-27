@@ -88,3 +88,41 @@ export function patchMacAbout(source) {
   if (matches.length !== 1) throw new Error('Original About system section changed; reconcile the Mac build information before building.');
   return source.replace(matches[0][0], `<h2 ${matches[0][1]}>macOS Rebuild</h2><p ${matches[0][1]}>Unofficial community rebuild · Apple Silicon · macOS 13 or later</p>`);
 }
+
+export function patchAutoTappoChestBridge(source) {
+  const marker = 'async function zl(e){';
+  const start = source.indexOf(marker);
+  if (start < 0 || source.split(marker).length !== 2) {
+    throw new Error('Original chest-open handler changed; reconcile the AutoTappo bridge before building.');
+  }
+
+  // Find the matching closing brace without relying on minified variable
+  // names or on a fragile next-function marker.
+  const open = source.indexOf('{', start);
+  let depth = 0;
+  let quote = null;
+  let escaped = false;
+  let end = -1;
+  for (let i = open; i < source.length; i += 1) {
+    const ch = source[i];
+    if (quote) {
+      if (escaped) escaped = false;
+      else if (ch === '\\') escaped = true;
+      else if (ch === quote) quote = null;
+      continue;
+    }
+    if (ch === '"' || ch === "'" || ch === '`') {
+      quote = ch;
+      continue;
+    }
+    if (ch === '{') depth += 1;
+    else if (ch === '}' && --depth === 0) {
+      end = i + 1;
+      break;
+    }
+  }
+  if (end < 0) throw new Error('Could not find the chest-open handler boundary.');
+
+  const bridge = `;(()=>{const api=window.__TAURI__,eventApi=api?.event;if(!eventApi?.listen)return;let active=!1,timer=null;const run=()=>{if(!active||Co.value||!R.isLoggedIn)return;qn.value?void zl("left"):Un.value&&void zl("right")};const setActive=e=>{active=e===!0;if(active&&!timer)timer=window.setInterval(run,1000);if(!active&&timer){window.clearInterval(timer);timer=null}};eventApi.listen("autotappo-auto-chest",e=>{const p=e?.payload||{};if(p.place==="left"||p.place==="right"){if(active&&!Co.value&&R.isLoggedIn)void zl(p.place);return}setActive(p.enabled)}).catch(()=>{});api.core?.invoke?.("auto_chest_state").then(setActive).catch(()=>{})})();`;
+  return source.slice(0, end) + bridge + source.slice(end);
+}

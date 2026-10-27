@@ -25,6 +25,7 @@ Download the latest `.dmg` from [Releases](https://github.com/nucrasenaa/wuwa-ta
 - The current build is ad-hoc/development signed and is not notarized. If macOS blocks the first launch, approve it in **System Settings → Privacy & Security**.
 - Enable **Input Monitoring** for `/Applications/Wuwa Tappo Global Mac.app` so global keyboard and mouse tracking can work.
 - Global login uses the official browser OAuth flow and the `wuwa-buddy://` callback.
+- AutoTappo macOS integration is available through a per-user `0600` Unix socket under the app data directory. Start this app and complete login before enabling AutoTappo's automatic chest option.
 
 The embedded official Global resource version is pinned in
 [`upstream-global.json`](upstream-global.json). Deployment tags follow that
@@ -117,6 +118,7 @@ virtual machine
 - รุ่นนี้ sign แบบ ad-hoc/development และยังไม่ได้ notarize หาก macOS บล็อกการเปิดครั้งแรก ให้กดยืนยันใน **System Settings → Privacy & Security**
 - เพิ่ม `/Applications/Wuwa Tappo Global Mac.app` ใน **Input Monitoring** เพื่อให้ตรวจจับคีย์บอร์ดและเมาส์ทั่วระบบได้
 - การ login ของ Global ใช้ browser OAuth ของทางการ และ callback ผ่าน `wuwa-buddy://`
+- รองรับการเชื่อมกับ AutoTappo รุ่น macOS ผ่าน Unix socket แบบต่อผู้ใช้ (สิทธิ์ `0600`) ให้เปิดแอปนี้และ login ก่อนเปิดตัวเลือกเปิดกล่องอัตโนมัติใน AutoTappo
 
 เวอร์ชันของ official Global resource จะถูกล็อกไว้ใน
 [`upstream-global.json`](upstream-global.json) และ deployment tag จะใช้เลขเดียวกัน

@@ -1,7 +1,7 @@
 import { cp, mkdir, readdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
-import { patchSessionBarriers, patchLoginReady, patchGlobalSdkUrls, patchMacUpdateFeedback, patchMacUpdater, patchMacAbout } from './patch-frontend.mjs';
+import { patchSessionBarriers, patchLoginReady, patchGlobalSdkUrls, patchMacUpdateFeedback, patchMacUpdater, patchMacAbout, patchAutoTappoChestBridge } from './patch-frontend.mjs';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 const source = path.join(root, 'frontend');
@@ -48,5 +48,10 @@ await patchOne(
   sourceText => /<h2 data-v-[^>]+>系统配置<\/h2>/.test(sourceText),
   patchMacAbout,
   'About system section',
+);
+await patchOne(
+  sourceText => sourceText.includes('async function zl(e){'),
+  patchAutoTappoChestBridge,
+  'AutoTappo chest bridge',
 );
 console.log(`Prepared official GLOBAL frontend at ${output}`);

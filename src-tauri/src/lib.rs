@@ -1,3 +1,4 @@
+mod automation;
 mod geometry;
 mod input;
 mod menu;
@@ -103,6 +104,7 @@ fn begin_session(
                     return Err("A sign-in session already exists; cannot change storage mode. Quit and retry.".into());
                 }
                 windows::setup(&handle)?;
+                automation::start(&handle)?;
                 if let Err(error) = input::start(handle.clone()) {
                     eprintln!("Global input unavailable: {error}");
                 }
@@ -221,6 +223,7 @@ fn handle(invoke: Invoke) -> bool {
         return true;
     }
     let handler: fn(Invoke) -> bool = tauri::generate_handler![
+        automation::auto_chest_state,
         storage::load_key_press_count,
         storage::save_key_press_count,
         storage::load_cumulative_click_count,
@@ -249,6 +252,7 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_process::init())
         .manage(windows::WindowState::default())
+        .manage(automation::AutomationState::default())
         .manage(StartupState::default())
         .manage(input::InputMonitor::new())
         .manage(socket::SocketState::default())
@@ -320,6 +324,7 @@ pub fn run() {
     };
     app.run(|app, event| {
         if let tauri::RunEvent::Exit = event {
+            automation::shutdown(app);
             socket::shutdown(app);
             if let Some(monitor) = app.try_state::<system::SystemMonitor>() {
                 if let Err(error) = monitor.stop() {
