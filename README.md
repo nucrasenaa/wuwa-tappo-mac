@@ -1,3 +1,5 @@
+<img width="2048" height="1332" alt="861905095_1135255525638784_5100116039852121752_n" src="https://github.com/user-attachments/assets/6684ef1f-160c-49e9-8a50-330668a16d47" />
+
 # Wuwa Tappo Global · macOS
 
 [English](#english) · [ภาษาไทย](#ภาษาไทย)
