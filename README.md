@@ -58,6 +58,12 @@ npm run icons
 npm run prepare:frontend
 ```
 
+GitHub Actions checks the official Global manifest daily. When a new official
+resource version is detected, it validates the extracted frontend, runs the
+JavaScript and Rust tests, builds the app, packages the ZIP and DMG, commits the
+new lock file, and publishes the next `v1.0.0-mac.N` release automatically. A
+failed check or build does not publish a release and opens an issue for review.
+
 The app bundle is written to
 `src-tauri/target/release/bundle/macos/`; ZIP and DMG packages are written to
 `dist/`. Generated frontend resources and local build caches are not tracked.
@@ -137,6 +143,11 @@ npm run assets:sync -- --region global --installer "$HOME/Downloads/WuwaTappo-gl
 npm run icons
 npm run prepare:frontend
 ```
+
+GitHub Actions จะตรวจสอบ manifest ของ Global ทุกวัน หากพบ resource รุ่นใหม่
+จะตรวจสอบ frontend, รัน JavaScript และ Rust tests, build แอป, สร้าง ZIP/DMG,
+commit lock file และ publish release ถัดไปในรูปแบบ `v1.0.0-mac.N` ให้อัตโนมัติ
+หากตรวจสอบหรือ build ไม่ผ่าน ระบบจะไม่ publish release และจะเปิด issue ไว้ให้ตรวจสอบ
 
 ไฟล์แอปจะอยู่ที่ `src-tauri/target/release/bundle/macos/` และไฟล์ ZIP/DMG
 จะอยู่ที่ `dist/` โดย frontend ที่สร้างขึ้นและ cache ในเครื่องจะไม่ถูก commit

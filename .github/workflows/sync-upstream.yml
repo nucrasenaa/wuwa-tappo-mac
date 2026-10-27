@@ -1,4 +1,4 @@
-name: Sync official Global
+name: Sync and release official Global
 
 on:
   schedule:
@@ -18,7 +18,6 @@ jobs:
     timeout-minutes: 45
     permissions:
       contents: write
-      pull-requests: write
       issues: write
     env:
       GH_TOKEN: ${{ github.token }}
@@ -27,6 +26,8 @@ jobs:
       CARGO_INCREMENTAL: '0'
     steps:
       - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
       - uses: actions/setup-node@v5
         with:
           node-version: '24'
@@ -38,13 +39,9 @@ jobs:
           node scripts/sync-upstream.mjs --check > .work/upstream-check.json
           node --input-type=module <<'NODE'
           import { readFileSync, appendFileSync } from 'node:fs';
-          import { execFileSync } from 'node:child_process';
           const result = JSON.parse(readFileSync('.work/upstream-check.json', 'utf8'));
-          if (typeof result.changed !== 'boolean' || !/^\d+\.\d+\.\d+$/.test(result.latestVersion)) throw new Error('Invalid official version response');
-          const title = `同步 Global 官方资源 ${result.latestVersion}`;
-          const open = JSON.parse(execFileSync('gh', ['pr', 'list', '--state', 'open', '--search', `${title} in:title`, '--json', 'title'], { encoding: 'utf8' }));
-          const pending = open.some(pr => pr.title === title);
-          appendFileSync(process.env.GITHUB_OUTPUT, `changed=${result.changed && !pending}\nversion=${result.latestVersion}\n`);
+          if (typeof result.changed !== 'boolean' || !/^\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?$/.test(result.latestVersion)) throw new Error('Invalid official version response');
+          appendFileSync(process.env.GITHUB_OUTPUT, `changed=${result.changed}\nversion=${result.latestVersion}\n`);
           NODE
       - name: Install build tools
         if: steps.upstream.outputs.changed == 'true'
@@ -83,11 +80,11 @@ jobs:
         run: |
           set -o pipefail
           bash scripts/package-macos.sh 2>&1 | tee .work/package-macos.log
-      - name: Keep validated packages for review
+      - name: Keep validated packages for audit
         if: steps.validate.outcome == 'success'
         uses: actions/upload-artifact@v4
         with:
-          name: official-global-candidate
+          name: official-global-release-candidate
           path: |
             dist/*.zip
             dist/*.dmg
@@ -102,21 +99,60 @@ jobs:
             ~/.cargo/git
             src-tauri/target
           key: ${{ steps.cargo-cache.outputs.cache-primary-key }}
-      - name: Open official-resource update pull request
+      - name: Commit lock and publish automatic release
         if: steps.validate.outcome == 'success'
         env:
           VERSION: ${{ steps.upstream.outputs.version }}
         run: |
           set -euo pipefail
           if git diff --quiet -- upstream-global.json; then exit 0; fi
-          BRANCH="codex/official-global-${VERSION}-${GITHUB_RUN_ID}"
-          git switch -c "$BRANCH"
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add upstream-global.json
           git commit -m "chore: sync official Global resources ${VERSION}"
-          git push origin "$BRANCH"
-          gh pr create --base main --head "$BRANCH" --title "同步 Global 官方资源 ${VERSION}" --body "官方资源锁定已更新。此工作流已通过资源完整性校验、契约测试、Rust 测试、原生构建及 ZIP/DMG 打包。请完成真人登录、输入权限和联机检查后合并，并打新的 Mac 版本标签发布。候选安装包见 Actions 的 official-global-candidate。"
+          git push origin HEAD:main
+
+          # Keep the macOS app version stable and increment the release sequence.
+          git fetch --tags --force origin
+          APP_VERSION=$(node --input-type=module -e "import { readFileSync } from 'node:fs'; console.log(JSON.parse(readFileSync('package.json', 'utf8')).version)")
+          LAST_RELEASE=0
+          while IFS= read -r TAG; do
+            NUMBER="${TAG##*.}"
+            if [[ "$NUMBER" =~ ^[0-9]+$ ]] && (( NUMBER > LAST_RELEASE )); then LAST_RELEASE=$NUMBER; fi
+          done < <(git tag --list "v${APP_VERSION}-mac.*")
+          RELEASE_NUMBER=$((LAST_RELEASE + 1))
+          TAG="v${APP_VERSION}-mac.${RELEASE_NUMBER}"
+          COMMIT=$(git rev-parse HEAD)
+          git tag -a "$TAG" "$COMMIT" -m "Release Wuwa Tappo Global Mac ${TAG}"
+          git push origin "$TAG"
+
+          cat > .work/release-notes.md <<NOTES
+          ## Wuwa Tappo Global · macOS
+
+          Automatic release for official Global resources ${VERSION}.
+
+          - Apple Silicon, macOS 13 or later.
+          - Includes the Global frontend and runtime assets.
+          - Requires Input Monitoring for global keyboard and mouse counting.
+          - This build is development/ad-hoc signed and is not notarized.
+          - Community rebuild; not an official Kuro Games macOS client.
+
+          ## ภาษาไทย
+
+          รีลีสอัตโนมัติสำหรับ resource ของ Global เวอร์ชัน ${VERSION}
+
+          - รองรับ Apple Silicon และ macOS 13 ขึ้นไป
+          - รวม frontend และ runtime ของ Global ไว้ในแอปแล้ว
+          - ต้องเปิด Input Monitoring เพื่อใช้นับคีย์บอร์ดและเมาส์ทั่วระบบ
+          - รุ่นนี้ sign แบบ development/ad-hoc และยังไม่ได้ notarize
+          - เป็น community rebuild ไม่ใช่แอป macOS อย่างเป็นทางการจาก Kuro Games
+          NOTES
+          gh release create "$TAG" dist/*.zip dist/*.dmg \
+            --target "$COMMIT" \
+            --title "Wuwa Tappo Global Mac ${TAG}" \
+            --notes-file .work/release-notes.md \
+            --latest
+          echo "Published $TAG for official Global ${VERSION}"
       - name: Report incompatible or unavailable upstream
         if: failure()
         run: |
