@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
-import { patchSessionBarriers, patchLoginReady, patchGlobalSdkUrls, patchMacUpdateFeedback, patchMacAbout } from '../scripts/patch-frontend.mjs';
+import { patchSessionBarriers, patchLoginReady, patchGlobalSdkUrls, patchMacUpdateFeedback, patchMacAbout, patchAutoTappoChestBridge } from '../scripts/patch-frontend.mjs';
 
 const root = new URL('../', import.meta.url);
 
@@ -57,4 +57,12 @@ test('About separates the Mac build target from official Windows requirements', 
   assert.ok(patched.includes('Official Windows requirements'));
   assert.ok(patched.includes('html.replace("系统配置","Official Windows requirements")'));
   assert.throws(() => patchMacAbout(''), /About system section changed/);
+});
+
+test('AutoTappo chest bridge preserves the minified open handler boundary', () => {
+  const source = 'async function zl(e){if(e==="left"){return "}";}return e;}function next(){}';
+  const patched = patchAutoTappoChestBridge(source);
+  assert.ok(patched.includes('autotappo-auto-chest'));
+  assert.equal(patched.indexOf('function next()'), patched.lastIndexOf('function next()'));
+  assert.throws(() => patchAutoTappoChestBridge(''), /chest-open handler changed/);
 });
