@@ -61,7 +61,8 @@ npm run icons
 npm run prepare:frontend
 ```
 
-GitHub Actions checks the official Global manifest daily. When a new official
+GitHub Actions checks the official Global manifest twice daily at 09:00 and
+18:00 Bangkok time. When a new official
 resource version is detected, it validates the extracted frontend, runs the
 JavaScript and Rust tests, builds the app, packages the ZIP and DMG, commits the
 new lock file, and publishes a matching `v<Global-version>` release
@@ -150,7 +151,8 @@ npm run icons
 npm run prepare:frontend
 ```
 
-GitHub Actions จะตรวจสอบ manifest ของ Global ทุกวัน หากพบ resource รุ่นใหม่
+GitHub Actions จะตรวจสอบ manifest ของ Global วันละ 2 รอบ เวลา 09:00 และ 18:00
+ตามเวลาไทย หากพบ resource รุ่นใหม่
 จะตรวจสอบ frontend, รัน JavaScript และ Rust tests, build แอป, สร้าง ZIP/DMG,
 commit lock file และ publish release โดยใช้เลขเดียวกับ Global resource เช่น
 `v1.0.2` ให้อัตโนมัติ

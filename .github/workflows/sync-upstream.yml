@@ -2,7 +2,8 @@ name: Sync and release official Global
 
 on:
   schedule:
-    - cron: '17 2 * * *'
+    # 09:00 and 18:00 Asia/Bangkok (02:00 and 11:00 UTC).
+    - cron: '0 2,11 * * *'
   workflow_dispatch:
 
 permissions:
