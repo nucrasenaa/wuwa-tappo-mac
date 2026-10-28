@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: Existing version tag, for example v1.0.0-mac.1
+        description: Existing Global resource version tag, for example v1.0.2
         required: true
         type: string
 
@@ -40,7 +40,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          [[ "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+-mac\.[0-9]+$ ]]
+          [[ "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-mac\.[0-9]+)?$ ]]
           cat > /tmp/release-notes.md <<'NOTES'
           ## Wuwa Tappo Global · macOS 非官方重建版
 

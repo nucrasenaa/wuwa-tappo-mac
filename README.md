@@ -26,8 +26,9 @@ Download the latest `.dmg` from [Releases](https://github.com/nucrasenaa/wuwa-ta
 - Enable **Input Monitoring** for `/Applications/Wuwa Tappo Global Mac.app` so global keyboard and mouse tracking can work.
 - Global login uses the official browser OAuth flow and the `wuwa-buddy://` callback.
 
-The app's own macOS build version is `1.0.0`; the embedded official Global
-Windows resources are pinned to `1.0.1`.
+The embedded official Global resource version is pinned in
+[`upstream-global.json`](upstream-global.json). Deployment tags follow that
+version directly, for example `v1.0.2`.
 
 ### Build from source
 
@@ -61,7 +62,8 @@ npm run prepare:frontend
 GitHub Actions checks the official Global manifest daily. When a new official
 resource version is detected, it validates the extracted frontend, runs the
 JavaScript and Rust tests, builds the app, packages the ZIP and DMG, commits the
-new lock file, and publishes the next `v1.0.0-mac.N` release automatically. A
+new lock file, and publishes a matching `v<Global-version>` release
+automatically, such as `v1.0.2`. A
 failed check or build does not publish a release and opens an issue for review.
 
 The app bundle is written to
@@ -113,8 +115,9 @@ virtual machine
 - เพิ่ม `/Applications/Wuwa Tappo Global Mac.app` ใน **Input Monitoring** เพื่อให้ตรวจจับคีย์บอร์ดและเมาส์ทั่วระบบได้
 - การ login ของ Global ใช้ browser OAuth ของทางการ และ callback ผ่าน `wuwa-buddy://`
 
-เวอร์ชันของแอป macOS คือ `1.0.0` ส่วน resource ของ official Global Windows
-ที่ฝังอยู่ในแอปถูกล็อกไว้ที่ `1.0.1`
+เวอร์ชันของ official Global resource จะถูกล็อกไว้ใน
+[`upstream-global.json`](upstream-global.json) และ deployment tag จะใช้เลขเดียวกัน
+โดยตรง เช่น `v1.0.2`
 
 ### Build จาก source
 
@@ -146,7 +149,8 @@ npm run prepare:frontend
 
 GitHub Actions จะตรวจสอบ manifest ของ Global ทุกวัน หากพบ resource รุ่นใหม่
 จะตรวจสอบ frontend, รัน JavaScript และ Rust tests, build แอป, สร้าง ZIP/DMG,
-commit lock file และ publish release ถัดไปในรูปแบบ `v1.0.0-mac.N` ให้อัตโนมัติ
+commit lock file และ publish release โดยใช้เลขเดียวกับ Global resource เช่น
+`v1.0.2` ให้อัตโนมัติ
 หากตรวจสอบหรือ build ไม่ผ่าน ระบบจะไม่ publish release และจะเปิด issue ไว้ให้ตรวจสอบ
 
 ไฟล์แอปจะอยู่ที่ `src-tauri/target/release/bundle/macos/` และไฟล์ ZIP/DMG

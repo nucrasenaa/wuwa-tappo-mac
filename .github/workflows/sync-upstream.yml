@@ -112,16 +112,13 @@ jobs:
           git commit -m "chore: sync official Global resources ${VERSION}"
           git push origin HEAD:main
 
-          # Keep the macOS app version stable and increment the release sequence.
+          # Deployment tags mirror the official Global resource version.
           git fetch --tags --force origin
-          APP_VERSION=$(node --input-type=module -e "import { readFileSync } from 'node:fs'; console.log(JSON.parse(readFileSync('package.json', 'utf8')).version)")
-          LAST_RELEASE=0
-          while IFS= read -r TAG; do
-            NUMBER="${TAG##*.}"
-            if [[ "$NUMBER" =~ ^[0-9]+$ ]] && (( NUMBER > LAST_RELEASE )); then LAST_RELEASE=$NUMBER; fi
-          done < <(git tag --list "v${APP_VERSION}-mac.*")
-          RELEASE_NUMBER=$((LAST_RELEASE + 1))
-          TAG="v${APP_VERSION}-mac.${RELEASE_NUMBER}"
+          TAG="v${VERSION}"
+          if git show-ref --tags --verify --quiet "refs/tags/${TAG}"; then
+            echo "Release tag ${TAG} already exists; refusing to overwrite it automatically." >&2
+            exit 1
+          fi
           COMMIT=$(git rev-parse HEAD)
           git tag -a "$TAG" "$COMMIT" -m "Release Wuwa Tappo Global Mac ${TAG}"
           git push origin "$TAG"
