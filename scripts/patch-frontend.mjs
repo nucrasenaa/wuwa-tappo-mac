@@ -126,3 +126,26 @@ export function patchAutoTappoChestBridge(source) {
   const bridge = `;(()=>{const api=window.__TAURI__,eventApi=api?.event;if(!eventApi?.listen)return;let active=!1,timer=null;const run=()=>{if(!active||Co.value||!R.isLoggedIn)return;qn.value?void zl("left"):Un.value&&void zl("right")};const setActive=e=>{active=e===!0;if(active&&!timer)timer=window.setInterval(run,1000);if(!active&&timer){window.clearInterval(timer);timer=null}};eventApi.listen("autotappo-auto-chest",e=>{const p=e?.payload||{};if(p.place==="left"||p.place==="right"){if(active&&!Co.value&&R.isLoggedIn)void zl(p.place);return}setActive(p.enabled)}).catch(()=>{});api.core?.invoke?.("auto_chest_state").then(setActive).catch(()=>{})})();`;
   return source.slice(0, end) + bridge + source.slice(end);
 }
+
+export function patchDockDragHitTesting(source) {
+  const interactionGuard = 'if(!pt.value||Me()||It.value)return;if(zt.value){';
+  const interactionReplacement = 'if(!pt.value||Me())return;if(It.value){if(t!=="press"||e!=="left")return;let I=Ht(i,l);if(I||(await tn(!1),I=Ht(i,l)),!I)return;const z=document.elementFromPoint(I.x,I.y),dock=ce.value?.querySelector(".pet-dock-content"),rect=dock?.getBoundingClientRect(),onDock=!!rect&&I.x>=rect.left&&I.x<rect.right&&I.y>=rect.top&&I.y<rect.bottom;if(onDock&&!z?.closest("button")){An(!0),Gd(I.x,I.y)}return}if(zt.value){';
+  if (source.split(interactionGuard).length !== 2) {
+    throw new Error('Original game-mode interaction guard changed; reconcile the dock drag path before building.');
+  }
+  source = source.replace(interactionGuard, interactionReplacement);
+
+  const original = 'const z=document.elementFromPoint(I.x,I.y);if(!z)return;const ee=z.closest("button");if(ee instanceof HTMLElement){An(!0),ee.classList.contains("emotion-dot")?(Vo=ee,Rc(ee,"pointerdown",I.x,I.y)):ee.click();return}const Z=z.closest("[data-room-cat-id]");if(Z){const _e=Number(Z.dataset.roomCatId),Be=fe.value.find($e=>$e.id===_e);Be&&Qt(Be)&&al(Be,I.x,I.y,Z);return}z.closest(".pet-dock-content")&&(An(!0),Gd(I.x,I.y));return';
+  const replacement = 'const z=document.elementFromPoint(I.x,I.y),dock=ce.value?.querySelector(".pet-dock-content"),rect=dock?.getBoundingClientRect(),onDock=!!rect&&I.x>=rect.left&&I.x<rect.right&&I.y>=rect.top&&I.y<rect.bottom;if(!z&&!onDock)return;const ee=z?.closest("button");if(ee instanceof HTMLElement){An(!0),ee.classList.contains("emotion-dot")?(Vo=ee,Rc(ee,"pointerdown",I.x,I.y)):ee.click();return}const Z=z?.closest("[data-room-cat-id]");if(Z){const _e=Number(Z.dataset.roomCatId),Be=fe.value.find($e=>$e.id===_e);Be&&Qt(Be)&&al(Be,I.x,I.y,Z);return}(onDock||z?.closest(".pet-dock-content"))&&(An(!0),Gd(I.x,I.y));return';
+  if (source.split(original).length !== 2) {
+    throw new Error('Original dock drag hit-test changed; reconcile the drag fallback before building.');
+  }
+  source = source.replace(original, replacement);
+
+  const dockClick = 'onDockClick:()=>{np()},isInteractionLocked:()=>Me(),';
+  const dockClickReplacement = 'onDockClick:()=>{It.value||np()},isInteractionLocked:()=>Me(),';
+  if (source.split(dockClick).length !== 2) {
+    throw new Error('Original dock click handler changed; reconcile game-mode drag behavior before building.');
+  }
+  return source.replace(dockClick, dockClickReplacement);
+}

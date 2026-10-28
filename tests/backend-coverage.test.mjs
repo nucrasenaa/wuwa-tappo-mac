@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
-import { patchSessionBarriers, patchLoginReady, patchGlobalSdkUrls, patchMacUpdateFeedback, patchMacAbout, patchAutoTappoChestBridge } from '../scripts/patch-frontend.mjs';
+import { patchSessionBarriers, patchLoginReady, patchGlobalSdkUrls, patchMacUpdateFeedback, patchMacAbout, patchAutoTappoChestBridge, patchDockDragHitTesting } from '../scripts/patch-frontend.mjs';
 
 const root = new URL('../', import.meta.url);
 
@@ -65,4 +65,26 @@ test('AutoTappo chest bridge preserves the minified open handler boundary', () =
   assert.ok(patched.includes('autotappo-auto-chest'));
   assert.equal(patched.indexOf('function next()'), patched.lastIndexOf('function next()'));
   assert.throws(() => patchAutoTappoChestBridge(''), /chest-open handler changed/);
+});
+
+test('dock drag remains available in game mode and falls back to dock bounds', () => {
+  const source = 'async function Ic(e,t,i,l,d){if(!pt.value||Me()||It.value)return;if(zt.value){onDockClick:()=>{np()},isInteractionLocked:()=>Me(),const z=document.elementFromPoint(I.x,I.y);if(!z)return;const ee=z.closest("button");if(ee instanceof HTMLElement){An(!0),ee.classList.contains("emotion-dot")?(Vo=ee,Rc(ee,"pointerdown",I.x,I.y)):ee.click();return}const Z=z.closest("[data-room-cat-id]");if(Z){const _e=Number(Z.dataset.roomCatId),Be=fe.value.find($e=>$e.id===_e);Be&&Qt(Be)&&al(Be,I.x,I.y,Z);return}z.closest(".pet-dock-content")&&(An(!0),Gd(I.x,I.y));return}';
+  const patched = patchDockDragHitTesting(source);
+  assert.ok(patched.includes('if(!pt.value||Me())return;if(It.value){'));
+  assert.ok(patched.includes('if(t!=="press"||e!=="left")return'));
+  assert.ok(patched.includes('if(onDock&&!z?.closest("button")){An(!0),Gd(I.x,I.y)}return}'));
+  assert.ok(patched.includes('dock=ce.value?.querySelector(".pet-dock-content")'));
+  assert.ok(patched.includes('onDock=!!rect&&I.x>=rect.left'));
+  assert.ok(patched.includes('z?.closest("button")'));
+  assert.ok(patched.includes('(onDock||z?.closest(".pet-dock-content"))'));
+  assert.ok(patched.includes('onDockClick:()=>{It.value||np()}'));
+  assert.throws(() => patchDockDragHitTesting(''), /game-mode interaction guard changed/);
+});
+
+test('multiple patches targeting one official asset are composable', () => {
+  const chest = 'async function zl(e){if(e==="left"){return "}";}return e;}function next(){}';
+  const dock = 'async function Ic(e,t,i,l,d){if(!pt.value||Me()||It.value)return;if(zt.value){onDockClick:()=>{np()},isInteractionLocked:()=>Me(),const z=document.elementFromPoint(I.x,I.y);if(!z)return;const ee=z.closest("button");if(ee instanceof HTMLElement){An(!0),ee.classList.contains("emotion-dot")?(Vo=ee,Rc(ee,"pointerdown",I.x,I.y)):ee.click();return}const Z=z.closest("[data-room-cat-id]");if(Z){const _e=Number(Z.dataset.roomCatId),Be=fe.value.find($e=>$e.id===_e);Be&&Qt(Be)&&al(Be,I.x,I.y,Z);return}z.closest(".pet-dock-content")&&(An(!0),Gd(I.x,I.y));return}';
+  const patched = patchDockDragHitTesting(patchAutoTappoChestBridge(`${chest}${dock}`));
+  assert.ok(patched.includes('autotappo-auto-chest'));
+  assert.ok(patched.includes('onDockClick:()=>{It.value||np()}'));
 });

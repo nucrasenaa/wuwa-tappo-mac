@@ -1,7 +1,7 @@
 import { cp, mkdir, readdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
-import { patchSessionBarriers, patchLoginReady, patchGlobalSdkUrls, patchMacUpdateFeedback, patchMacUpdater, patchMacAbout, patchAutoTappoChestBridge } from './patch-frontend.mjs';
+import { patchSessionBarriers, patchLoginReady, patchGlobalSdkUrls, patchMacUpdateFeedback, patchMacUpdater, patchMacAbout, patchAutoTappoChestBridge, patchDockDragHitTesting } from './patch-frontend.mjs';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 const source = path.join(root, 'frontend');
@@ -31,7 +31,13 @@ async function patchOne(predicate, patch, label) {
     if (predicate(sourceText)) matches.push({ name, sourceText });
   }
   if (matches.length !== 1) throw new Error(`Expected one ${label}, found ${matches.length}. Reconcile the app version before building.`);
-  await writeFile(path.join(output, 'assets', matches[0].name), patch(matches[0].sourceText));
+  // Read the already-prepared asset instead of the original source. Multiple
+  // patches can target the same official bundle (for example the chest bridge
+  // and the dock hit-test fix). Writing from source here silently discarded
+  // whichever patch ran immediately before it.
+  const outputFile = path.join(output, 'assets', matches[0].name);
+  const current = await readFile(outputFile, 'utf8');
+  await writeFile(outputFile, patch(current));
 }
 
 await patchOne(
@@ -53,5 +59,10 @@ await patchOne(
   sourceText => sourceText.includes('async function zl(e){'),
   patchAutoTappoChestBridge,
   'AutoTappo chest bridge',
+);
+await patchOne(
+  sourceText => sourceText.includes('async function Ic(e,t,i,l,d){'),
+  patchDockDragHitTesting,
+  'dock drag hit-test fallback',
 );
 console.log(`Prepared official GLOBAL frontend at ${output}`);
