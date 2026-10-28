@@ -2,7 +2,10 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 
-const entry = await readFile(new URL('../frontend/assets/index-ULLd3gpz.js', import.meta.url), 'utf8');
+const index = await readFile(new URL('../frontend/index.html', import.meta.url), 'utf8');
+const entryModule = index.match(/src=\"\.\/([^\"]+\.js)\"/)?.[1];
+assert.ok(entryModule, 'Official frontend entry module is missing');
+const entry = await readFile(new URL(`../frontend/${entryModule}`, import.meta.url), 'utf8');
 
 test('Global login uses the browser OAuth flow and the configured deep-link callback', () => {
   assert.match(entry, /APP_REGION="GLOBAL"/);
