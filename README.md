@@ -28,7 +28,9 @@ Download the latest `.dmg` from [Releases](https://github.com/nucrasenaa/wuwa-ta
 
 The embedded official Global resource version is pinned in
 [`upstream-global.json`](upstream-global.json). Deployment tags follow that
-version directly, for example `v1.0.2`.
+version directly, for example `v1.0.2`. Automatic builds also set the Tauri
+version, so `CFBundleShortVersionString` and the ZIP/DMG filenames match the
+Global resource version.
 
 ### Build from source
 
@@ -117,7 +119,8 @@ virtual machine
 
 เวอร์ชันของ official Global resource จะถูกล็อกไว้ใน
 [`upstream-global.json`](upstream-global.json) และ deployment tag จะใช้เลขเดียวกัน
-โดยตรง เช่น `v1.0.2`
+โดยตรง เช่น `v1.0.2` โดย workflow อัตโนมัติจะปรับ Tauri version ให้ตรงด้วย
+ดังนั้น `CFBundleShortVersionString` และชื่อไฟล์ ZIP/DMG จะใช้เลขเดียวกับ Global
 
 ### Build จาก source
 

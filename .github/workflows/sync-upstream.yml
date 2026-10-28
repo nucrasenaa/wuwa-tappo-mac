@@ -61,9 +61,20 @@ jobs:
           key: macos-arm64-rust-1.97.1-${{ hashFiles('src-tauri/Cargo.lock') }}
       - name: Validate updated official resources
         if: steps.upstream.outputs.changed == 'true'
+        env:
+          GLOBAL_VERSION: ${{ steps.upstream.outputs.version }}
         run: |
           npm ci
           node scripts/sync-upstream.mjs --update-lock
+          node --input-type=module <<'NODE'
+          import { readFile, writeFile } from 'node:fs/promises';
+          const path = 'src-tauri/tauri.conf.json';
+          const version = process.env.GLOBAL_VERSION;
+          if (!/^\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?$/.test(version)) throw new Error(`Invalid Global version: ${version}`);
+          const config = JSON.parse(await readFile(path, 'utf8'));
+          config.version = version;
+          await writeFile(path, `${JSON.stringify(config, null, 2)}\n`);
+          NODE
           npm run icons
           npm run prepare:frontend
           npm test
@@ -105,10 +116,10 @@ jobs:
           VERSION: ${{ steps.upstream.outputs.version }}
         run: |
           set -euo pipefail
-          if git diff --quiet -- upstream-global.json; then exit 0; fi
+          git add upstream-global.json src-tauri/tauri.conf.json
+          if git diff --cached --quiet; then exit 0; fi
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add upstream-global.json
           git commit -m "chore: sync official Global resources ${VERSION}"
           git push origin HEAD:main
 
