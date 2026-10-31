@@ -55,11 +55,14 @@ export function patchDomesticLoginReload(source) {
 }
 
 export function patchMacUpdateFeedback(source) {
-  const pattern = /([A-Za-z_$][\w$]*)\.value=n\("setting_version_check_failed"\)/g;
+  const pattern = /([A-Za-z_$][\w$]*)\.value=([A-Za-z_$][\w$]*)\("setting_version_check_failed"\)/g;
   const matches = [...source.matchAll(pattern)];
   if (matches.length !== 1) throw new Error('Original update feedback changed; reconcile the Mac update message before building.');
   const original = matches[0][0];
-  return source.replace(original, `${matches[0][1]}.value=h.message||n("setting_version_check_failed")`);
+  const before = source.slice(0, matches[0].index);
+  const errorBindings = [...before.matchAll(/if\(([A-Za-z_$][\w$]*)\.kind==="error"\)\{/g)];
+  const errorBinding = errorBindings.at(-1)?.[1] ?? 'h';
+  return source.replace(original, `${matches[0][1]}.value=${errorBinding}.message||${matches[0][2]}("setting_version_check_failed")`);
 }
 
 export function patchMacUpdater(source) {
@@ -90,9 +93,15 @@ export function patchMacAbout(source) {
 }
 
 export function patchAutoTappoChestBridge(source) {
-  const marker = 'async function zl(e){';
-  const start = source.indexOf(marker);
-  if (start < 0 || source.split(marker).length !== 2) {
+  const chestLog = 'console.warn("[chest] openChest failed"';
+  const logIndex = source.indexOf(chestLog);
+  const legacyMarker = 'async function zl(e){';
+  const legacyStart = source.indexOf(legacyMarker);
+  const start = logIndex >= 0 ? source.lastIndexOf('async function ', logIndex) : legacyStart;
+  const handlerName = logIndex >= 0
+    ? source.slice(start).match(/^async function ([A-Za-z_$][\w$]*)\(/)?.[1]
+    : (legacyStart >= 0 ? 'zl' : null);
+  if (start < 0 || !handlerName || (logIndex < 0 && source.split(legacyMarker).length !== 2)) {
     throw new Error('Original chest-open handler changed; reconcile the AutoTappo bridge before building.');
   }
 
@@ -123,11 +132,24 @@ export function patchAutoTappoChestBridge(source) {
   }
   if (end < 0) throw new Error('Could not find the chest-open handler boundary.');
 
-  const bridge = `;(()=>{const api=window.__TAURI__,eventApi=api?.event;if(!eventApi?.listen)return;let active=!1,timer=null;const run=()=>{if(!active||Co.value||!R.isLoggedIn)return;qn.value?void zl("left"):Un.value&&void zl("right")};const setActive=e=>{active=e===!0;if(active&&!timer)timer=window.setInterval(run,1000);if(!active&&timer){window.clearInterval(timer);timer=null}};eventApi.listen("autotappo-auto-chest",e=>{const p=e?.payload||{};if(p.place==="left"||p.place==="right"){if(active&&!Co.value&&R.isLoggedIn)void zl(p.place);return}setActive(p.enabled)}).catch(()=>{});api.core?.invoke?.("auto_chest_state").then(setActive).catch(()=>{})})();`;
+  const bridge = `;(()=>{const api=window.__TAURI__,eventApi=api?.event;if(!eventApi?.listen)return;let active=!1,timer=null,running=!1;const run=async()=>{if(!active||running)return;running=!0;try{await ${handlerName}("left");await ${handlerName}("right")}finally{running=!1}};const setActive=e=>{active=e===!0;if(active&&!timer){run();timer=window.setInterval(run,1000)}if(!active&&timer){window.clearInterval(timer);timer=null}};eventApi.listen("autotappo-auto-chest",e=>{const p=e?.payload||{};if(p.place==="left"||p.place==="right"){if(active&&!running)void ${handlerName}(p.place);return}setActive(p.enabled)}).catch(()=>{});api.core?.invoke?.("auto_chest_state").then(setActive).catch(()=>{})})();`;
   return source.slice(0, end) + bridge + source.slice(end);
 }
 
 export function patchDockDragHitTesting(source) {
+  const modernGuard = 'if(!ct.value||Ie()||It.value)return;if(Zt.value){';
+  if (source.split(modernGuard).length === 2) {
+    const modernGuardReplacement = 'if(!ct.value||Ie())return;if(It.value){if(t!=="press"||e!=="left")return;let M=Wt(o,l);if(M||(await rn(!1),M=Wt(o,l)),!M)return;const j=document.elementFromPoint(M.x,M.y),dock=ce.value?.querySelector(".pet-dock-content"),rect=dock?.getBoundingClientRect(),onDock=!!rect&&M.x>=rect.left&&M.x<rect.right&&M.y>=rect.top&&M.y<rect.bottom;if(onDock&&!j?.closest("button")){In(!0),dp(M.x,M.y)}return}if(Zt.value){';
+    source = source.replace(modernGuard, modernGuardReplacement);
+    const modernOriginal = 'const j=document.elementFromPoint(M.x,M.y);if(!j)return;const ee=j.closest("button");if(ee instanceof HTMLElement){In(!0),ee.classList.contains("emotion-dot")?($o=ee,Kc(ee,"pointerdown",M.x,M.y)):ee.click();return}const Z=j.closest("[data-room-cat-id]");if(Z){const _e=Number(Z.dataset.roomCatId),Ne=de.value.find(Je=>Je.id===_e);Ne&&tn(Ne)&&_l(Ne,M.x,M.y,Z);return}j.closest(".pet-dock-content")&&(In(!0),dp(M.x,M.y));return';
+    const modernReplacement = 'const j=document.elementFromPoint(M.x,M.y),dock=ce.value?.querySelector(".pet-dock-content"),rect=dock?.getBoundingClientRect(),onDock=!!rect&&M.x>=rect.left&&M.x<rect.right&&M.y>=rect.top&&M.y<rect.bottom;if(!j&&!onDock)return;const ee=j?.closest("button");if(ee instanceof HTMLElement){In(!0),ee.classList.contains("emotion-dot")?($o=ee,Kc(ee,"pointerdown",M.x,M.y)):ee.click();return}const Z=j?.closest("[data-room-cat-id]");if(Z){const _e=Number(Z.dataset.roomCatId),Ne=de.value.find(Je=>Je.id===_e);Ne&&tn(Ne)&&_l(Ne,M.x,M.y,Z);return}(onDock||j?.closest(".pet-dock-content"))&&(In(!0),dp(M.x,M.y));return';
+    if (source.split(modernOriginal).length !== 2) throw new Error('Original dock drag hit-test changed; reconcile the drag fallback before building.');
+    source = source.replace(modernOriginal, modernReplacement);
+    const modernDockClick = 'onDockClick:()=>{Sp()},isInteractionLocked:()=>Ie(),';
+    if (source.split(modernDockClick).length !== 2) throw new Error('Original dock click handler changed; reconcile game-mode drag behavior before building.');
+    return source.replace(modernDockClick, 'onDockClick:()=>{It.value||Sp()},isInteractionLocked:()=>Ie(),');
+  }
+
   const interactionGuard = 'if(!pt.value||Me()||It.value)return;if(zt.value){';
   const interactionReplacement = 'if(!pt.value||Me())return;if(It.value){if(t!=="press"||e!=="left")return;let I=Ht(i,l);if(I||(await tn(!1),I=Ht(i,l)),!I)return;const z=document.elementFromPoint(I.x,I.y),dock=ce.value?.querySelector(".pet-dock-content"),rect=dock?.getBoundingClientRect(),onDock=!!rect&&I.x>=rect.left&&I.x<rect.right&&I.y>=rect.top&&I.y<rect.bottom;if(onDock&&!z?.closest("button")){An(!0),Gd(I.x,I.y)}return}if(zt.value){';
   if (source.split(interactionGuard).length !== 2) {

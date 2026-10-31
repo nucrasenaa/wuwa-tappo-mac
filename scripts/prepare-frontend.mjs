@@ -46,7 +46,7 @@ await patchOne(
   'modal event bridge',
 );
 await patchOne(
-  sourceText => /[A-Za-z_$][\w$]*\.value=n\("setting_version_check_failed"\)/.test(sourceText),
+  sourceText => /[A-Za-z_$][\w$]*\.value=[A-Za-z_$][\w$]*\("setting_version_check_failed"\)/.test(sourceText),
   patchMacUpdateFeedback,
   'update feedback',
 );
@@ -56,12 +56,12 @@ await patchOne(
   'About system section',
 );
 await patchOne(
-  sourceText => sourceText.includes('async function zl(e){'),
+  sourceText => sourceText.includes('console.warn("[chest] openChest failed"') || sourceText.includes('async function zl(e){'),
   patchAutoTappoChestBridge,
   'AutoTappo chest bridge',
 );
 await patchOne(
-  sourceText => sourceText.includes('async function Ic(e,t,i,l,d){'),
+  sourceText => sourceText.includes('if(!ct.value||Ie()||It.value)return;if(Zt.value){') || sourceText.includes('async function Ic(e,t,i,l,d){'),
   patchDockDragHitTesting,
   'dock drag hit-test fallback',
 );

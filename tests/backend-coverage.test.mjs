@@ -48,6 +48,10 @@ test('Global SDK script and stylesheet use HTTPS from the local Tauri origin', (
 
 test('Mac update feedback preserves the native platform explanation', () => {
   assert.equal(patchMacUpdateFeedback('re.value=n("setting_version_check_failed")'), 're.value=h.message||n("setting_version_check_failed")');
+  assert.equal(
+    patchMacUpdateFeedback('if(_.kind==="error"){wt("check_failed"),le.value=t("setting_version_check_failed")}'),
+    'if(_.kind==="error"){wt("check_failed"),le.value=_.message||t("setting_version_check_failed")}',
+  );
   assert.throws(() => patchMacUpdateFeedback(''), /update feedback changed/);
 });
 
@@ -64,6 +68,8 @@ test('AutoTappo chest bridge preserves the minified open handler boundary', () =
   const patched = patchAutoTappoChestBridge(source);
   assert.ok(patched.includes('autotappo-auto-chest'));
   assert.equal(patched.indexOf('function next()'), patched.lastIndexOf('function next()'));
+  const renamed = 'async function pc(e){if(e==="left"){return "}";}console.warn("[chest] openChest failed",e);return e;}function next(){}';
+  assert.match(patchAutoTappoChestBridge(renamed), /async function pc\(e\).*await pc\("left"\)/s);
   assert.throws(() => patchAutoTappoChestBridge(''), /chest-open handler changed/);
 });
 
