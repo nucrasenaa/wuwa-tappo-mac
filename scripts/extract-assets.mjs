@@ -116,6 +116,36 @@ export function findEmbeddedNsis(bytes) {
   throw new Error('No structurally valid embedded NSIS installer found.');
 }
 
+function listNsisPayloadCandidates(sevenzip, archive) {
+  const result = spawnSync(sevenzip, ['l', '-slt', '-bd', archive], {
+    encoding: 'utf8',
+    maxBuffer: 1024 * 1024,
+  });
+  if (result.error) throw result.error;
+  if (result.status !== 0) throw new Error(`7-Zip listing failed: ${result.stderr || result.stdout}`);
+  return [...result.stdout.matchAll(/^Path = (.+)$/gm)]
+    .map(match => match[1].trim())
+    .filter(filename => filename && !filename.startsWith('$PLUGINSDIR/') && !/^uninstall\.exe$/i.test(filename));
+}
+
+function extractNsisPayload(sevenzip, archive, candidates) {
+  for (const candidate of candidates) {
+    const result = spawnSync(sevenzip, ['e', '-so', '-y', '-bd', archive, candidate], {
+      encoding: null,
+      maxBuffer: 512 * 1024 * 1024,
+    });
+    if (result.error || result.status !== 0 || !result.stdout?.length) continue;
+    try {
+      findAssetEntries(result.stdout);
+      return result.stdout;
+    } catch {
+      // NSIS also contains helper DLLs and an uninstaller. Keep looking for
+      // the Tauri payload instead of relying on a vendor-controlled filename.
+    }
+  }
+  throw new Error('No Tauri frontend payload found in the embedded NSIS installer.');
+}
+
 export async function extractAssets(bytes, output) {
   const entries = findAssetEntries(bytes);
   for (const entry of entries) {
@@ -179,12 +209,8 @@ async function main() {
     try {
       const filename = path.join(temporary, 'setup.exe');
       await writeFile(filename, installer.subarray(bounds.start, bounds.end));
-      const result = spawnSync(options.sevenzip, ['e', '-y', '-bd', `-o${temporary}`, filename, 'WuwaTappo.exe'], {
-        encoding: 'utf8', maxBuffer: 1024 * 1024,
-      });
-      if (result.error) throw result.error;
-      if (result.status !== 0) throw new Error(`7-Zip extraction failed: ${result.stderr || result.stdout}`);
-      bytes = await readFile(path.join(temporary, 'WuwaTappo.exe'));
+      const candidates = listNsisPayloadCandidates(options.sevenzip, filename);
+      bytes = extractNsisPayload(options.sevenzip, filename, candidates);
     } finally { await rm(temporary, { recursive: true, force: true }); }
   }
   const entries = findAssetEntries(bytes);

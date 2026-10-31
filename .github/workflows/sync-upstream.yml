@@ -167,8 +167,13 @@ jobs:
         run: |
           set -euo pipefail
           TITLE='Global 官方同步需要处理'
-          EXISTING=$(gh issue list --state open --search "$TITLE in:title" --json number --jq '.[0].number // empty')
           BODY="官方同步或兼容性验证失败，未发布新版本。请查看运行日志：https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+          if ! gh issue list --state open --search "$TITLE in:title" --json number --jq '.[0].number // empty' >/tmp/wuwa-open-issue 2>/tmp/wuwa-issue-error; then
+            echo "Could not inspect GitHub Issues; leaving the failed run as the report."
+            cat /tmp/wuwa-issue-error >&2 || true
+            exit 0
+          fi
+          EXISTING=$(cat /tmp/wuwa-open-issue)
           if [ -n "$EXISTING" ]; then
             gh issue comment "$EXISTING" --body "$BODY"
           else
